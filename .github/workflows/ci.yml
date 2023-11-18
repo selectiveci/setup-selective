@@ -56,8 +56,12 @@ jobs:
         id: test-action
         uses: ./
         with:
-          milliseconds: 1000
+          api-key: abc123
+          runner-id: 1
 
       - name: Print Output
         id: output
-        run: echo "${{ steps.test-action.outputs.time }}"
+        run: |
+          echo "SELECTIVE_RUN_ID: $SELECTIVE_RUN_ID"
+          echo "SELECTIVE_RUNNER_ID: $SELECTIVE_RUNNER_ID"
+          echo "SELECTIVE_RUN_ATTEMPT: $SELECTIVE_RUN_ATTEMPT"

@@ -1,23 +1,17 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Setup Selective'
+description: 'Sets necessary environment variables for Selective'
+author: 'Selective'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: 'heart'
-  color: 'red'
+  icon: 'terminal'
+  color: 'blue'
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
-    required: true
-    default: '1000'
-
-# Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+  runner-id:
+    description: 'The index of the CI node as defined in the matrix'
+  api-key:
+    description: 'Your Selective Suite API Key'
 
 runs:
   using: node20

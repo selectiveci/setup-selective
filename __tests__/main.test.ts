@@ -1,89 +1,122 @@
-/**
- * Unit tests for the action's main functionality, src/main.ts
- *
- * These should be run as if the action was called from a workflow.
- * Specifically, the inputs listed in `action.yml` should be set as environment
- * variables following the pattern `INPUT_<INPUT_NAME>`.
- */
-
 import * as core from '@actions/core'
-import * as main from '../src/main'
+import { run } from '../src/main'
 
-// Mock the action's main function
-const runMock = jest.spyOn(main, 'run')
+// Mock the core.exportVariable function
+jest.mock('@actions/core', () => ({
+  exportVariable: jest.fn(),
+  setFailed: jest.fn(),
+  getInput: jest.fn()
+}))
 
-// Other utilities
-const timeRegex = /^\d{2}:\d{2}:\d{2}/
+// Mock the github.context object
+jest.mock('@actions/github', () => ({
+  context: {
+    eventName: 'pull_request',
+    payload: {
+      pull_request: {
+        title: 'Test Pull Request'
+      }
+    }
+  }
+}))
 
-// Mock the GitHub Actions core library
-let debugMock: jest.SpyInstance
-let errorMock: jest.SpyInstance
-let getInputMock: jest.SpyInstance
-let setFailedMock: jest.SpyInstance
-let setOutputMock: jest.SpyInstance
-
-describe('action', () => {
+describe('run', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-
-    debugMock = jest.spyOn(core, 'debug').mockImplementation()
-    errorMock = jest.spyOn(core, 'error').mockImplementation()
-    getInputMock = jest.spyOn(core, 'getInput').mockImplementation()
-    setFailedMock = jest.spyOn(core, 'setFailed').mockImplementation()
-    setOutputMock = jest.spyOn(core, 'setOutput').mockImplementation()
   })
 
-  it('sets the time output', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation((name: string): string => {
-      switch (name) {
-        case 'milliseconds':
-          return '500'
-        default:
-          return ''
-      }
-    })
+  it('exports SELECTIVE_RUNNER_ID, SELECTIVE_RUN_ID, and SELECTIVE_RUN_ATTEMPT variables', async () => {
+    // Mock the getInput function
+    // eslint-disable-next-line no-extra-semi
+    ;(core.getInput as jest.Mock)
+      .mockReturnValueOnce('test-api-key')
+      .mockReturnValueOnce('1')
 
-    await main.run()
-    expect(runMock).toHaveReturned()
+    await run()
 
-    // Verify that all of the core library functions were called correctly
-    expect(debugMock).toHaveBeenNthCalledWith(1, 'Waiting 500 milliseconds ...')
-    expect(debugMock).toHaveBeenNthCalledWith(
-      2,
-      expect.stringMatching(timeRegex)
+    expect(core.exportVariable).toHaveBeenCalledWith('SELECTIVE_RUNNER_ID', '1')
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'SELECTIVE_RUN_ID',
+      process.env.GITHUB_RUN_ID
     )
-    expect(debugMock).toHaveBeenNthCalledWith(
-      3,
-      expect.stringMatching(timeRegex)
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'SELECTIVE_RUN_ATTEMPT',
+      process.env.GITHUB_RUN_ATTEMPT
     )
-    expect(setOutputMock).toHaveBeenNthCalledWith(
-      1,
-      'time',
-      expect.stringMatching(timeRegex)
-    )
-    expect(errorMock).not.toHaveBeenCalled()
   })
 
-  it('sets a failed status', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation((name: string): string => {
-      switch (name) {
-        case 'milliseconds':
-          return 'this is not a number'
-        default:
-          return ''
-      }
+  it('exports SELECTIVE_PR_TITLE variable for pull_request event', async () => {
+    // Mock the getInput function
+    // eslint-disable-next-line no-extra-semi
+    ;(core.getInput as jest.Mock)
+      .mockReturnValueOnce('test-api-key')
+      .mockReturnValueOnce('1')
+
+    await run()
+
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'SELECTIVE_PR_TITLE',
+      'Test Pull Request'
+    )
+  })
+
+  it('exports SELECTIVE_API_KEY variable if api-key input is provided', async () => {
+    // Mock the getInput function to return an API key
+    // eslint-disable-next-line no-extra-semi
+    ;(core.getInput as jest.Mock)
+      .mockReturnValueOnce('test-api-key')
+      .mockReturnValueOnce('1')
+
+    await run()
+
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'SELECTIVE_API_KEY',
+      'test-api-key'
+    )
+  })
+
+  it('throws an error if neither api-key input nor SELECTIVE_API_KEY environment variable is provided', async () => {
+    // Mock the getInput function to return undefined
+    // eslint-disable-next-line no-extra-semi
+    ;(core.getInput as jest.Mock)
+      .mockReturnValueOnce(undefined) // For api-key
+      .mockReturnValueOnce(undefined) // For runner-id
+
+    // Clear the SELECTIVE_API_KEY environment variable
+    delete process.env.SELECTIVE_API_KEY
+
+    await run()
+
+    expect(core.setFailed).toHaveBeenCalledWith(
+      'API key is required. Please provide a value for api-key input or set SELECTIVE_API_KEY environment variable.'
+    )
+  })
+
+  it('does not throw an error if api-key input is not provided but SELECTIVE_API_KEY environment variable is set', async () => {
+    // Mock the getInput function to return undefined
+    // eslint-disable-next-line no-extra-semi
+    ;(core.getInput as jest.Mock)
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce('1')
+
+    // Set the SELECTIVE_API_KEY environment variable
+    process.env.SELECTIVE_API_KEY = 'test-api-key'
+
+    await expect(run()).resolves.not.toThrow()
+  })
+
+  it('fails the workflow run if an error occurs', async () => {
+    // Mock the getInput function
+    // eslint-disable-next-line no-extra-semi
+    ;(core.getInput as jest.Mock).mockReturnValueOnce('1')
+
+    const error = new Error('Test error')
+    jest.spyOn(core, 'exportVariable').mockImplementation(() => {
+      throw error
     })
 
-    await main.run()
-    expect(runMock).toHaveReturned()
+    await run()
 
-    // Verify that all of the core library functions were called correctly
-    expect(setFailedMock).toHaveBeenNthCalledWith(
-      1,
-      'milliseconds not a number'
-    )
-    expect(errorMock).not.toHaveBeenCalled()
+    expect(core.setFailed).toHaveBeenCalledWith(error.message)
   })
 })

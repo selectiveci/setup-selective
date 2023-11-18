@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { wait } from './wait'
+import * as github from '@actions/github'
 
 /**
  * The main function for the action.
@@ -7,20 +7,38 @@ import { wait } from './wait'
  */
 export async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
+    const apiKey = core.getInput('api-key', { required: false })
+    const runnerId = core.getInput('runner-id', { required: false })
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    // Check if either apiKey or SELECTIVE_API_KEY is set
+    if (!apiKey && !process.env.SELECTIVE_API_KEY) {
+      throw new Error(
+        'API key is required. Please provide a value for api-key input or set SELECTIVE_API_KEY environment variable.'
+      )
+    }
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    // Set the environment variables for the action
+    if (apiKey) {
+      core.exportVariable('SELECTIVE_API_KEY', apiKey)
+    }
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    if (runnerId) {
+      core.exportVariable('SELECTIVE_RUNNER_ID', runnerId)
+    }
+
+    core.exportVariable('SELECTIVE_RUN_ID', process.env.GITHUB_RUN_ID)
+    core.exportVariable('SELECTIVE_RUN_ATTEMPT', process.env.GITHUB_RUN_ATTEMPT)
+
+    if (github.context.eventName === 'pull_request') {
+      core.exportVariable(
+        'SELECTIVE_PR_TITLE',
+        github.context.payload.pull_request?.title
+      )
+    }
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
   }
 }
+
+run()
