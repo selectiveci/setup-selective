@@ -5,7 +5,7 @@
 [![Check dist](https://github.com/selectiveci/setup-selective/actions/workflows/check-dist.yml/badge.svg)](https://github.com/selectiveci/setup-selective/actions/workflows/check-dist.yml)
 [![Coverage](./badges/coverage.svg)](./badges/coverage.svg)
 
-This action is for setting up need environment variables for [Selective](https://selective.ci)
+This action is for setting up needed environment variables for [Selective](https://selective.ci)
 
 ## Usage
 
