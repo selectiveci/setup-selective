@@ -26,9 +26,6 @@ export async function run(): Promise<void> {
       core.exportVariable('SELECTIVE_RUNNER_ID', runnerId)
     }
 
-    core.exportVariable('SELECTIVE_RUN_ID', process.env.GITHUB_RUN_ID)
-    core.exportVariable('SELECTIVE_RUN_ATTEMPT', process.env.GITHUB_RUN_ATTEMPT)
-
     if (github.context.eventName === 'pull_request') {
       core.exportVariable(
         'SELECTIVE_PR_TITLE',
