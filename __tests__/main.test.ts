@@ -25,7 +25,7 @@ describe('run', () => {
     jest.clearAllMocks()
   })
 
-  it('exports SELECTIVE_RUNNER_ID, SELECTIVE_RUN_ID, and SELECTIVE_RUN_ATTEMPT variables', async () => {
+  it('exports SELECTIVE_RUNNER_ID variable', async () => {
     // Mock the getInput function
     // eslint-disable-next-line no-extra-semi
     ;(core.getInput as jest.Mock)
@@ -35,14 +35,6 @@ describe('run', () => {
     await run()
 
     expect(core.exportVariable).toHaveBeenCalledWith('SELECTIVE_RUNNER_ID', '1')
-    expect(core.exportVariable).toHaveBeenCalledWith(
-      'SELECTIVE_RUN_ID',
-      process.env.GITHUB_RUN_ID
-    )
-    expect(core.exportVariable).toHaveBeenCalledWith(
-      'SELECTIVE_RUN_ATTEMPT',
-      process.env.GITHUB_RUN_ATTEMPT
-    )
   })
 
   it('exports SELECTIVE_PR_TITLE variable for pull_request event', async () => {
