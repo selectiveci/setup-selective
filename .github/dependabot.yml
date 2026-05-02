@@ -17,3 +17,14 @@ updates:
           - "eslint-*"
           - "eslint-plugin-*"
           - "eslint-config-*"
+    ignore:
+      # eslint v9+ requires migrating to flat config (eslint.config.js).
+      # Hold at v8 until that migration is done deliberately.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-plugin-github"
+        update-types: ["version-update:semver-major"]
+      # TypeScript majors are big enough to warrant a deliberate evaluation
+      # rather than an automated bump (cf. closed PR #76 for TS 5 -> 6).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
