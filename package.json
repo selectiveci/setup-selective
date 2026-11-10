@@ -1,7 +1,7 @@
 {
   "name": "setup-selective",
   "description": "Setup Selective GitHub action",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "author": "Selective",
   "repository": {
