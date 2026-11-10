@@ -29963,24 +29963,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-const metadata_1 = __nccwpck_require__(3630);
-const selective_1 = __nccwpck_require__(9993);
-const DEFAULT_HOST = 'https://app.selective.ci';
-function intInput(name, fallback) {
-    const raw = core.getInput(name);
-    if (!raw)
-        return fallback;
-    const value = Number(raw);
-    if (!Number.isInteger(value) || value < 1) {
-        throw new Error(`${name} must be a positive whole number, got "${raw}"`);
-    }
-    return value;
-}
-function setPlanOutputs(runners, status) {
-    core.setOutput('runners', runners);
-    core.setOutput('matrix', JSON.stringify(Array.from({ length: runners }, (_, i) => i)));
-    core.setOutput('status', status);
-}
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
@@ -29989,16 +29971,6 @@ async function run() {
     try {
         const apiKey = core.getInput('api-key', { required: false });
         const runnerId = core.getInput('runner-id', { required: false });
-        const maxRunners = core.getInput('max-runners')
-            ? intInput('max-runners', 1)
-            : undefined;
-        // Pull requests from forks get no secrets; planning still has to give
-        // the test job a matrix.
-        if (!apiKey && !process.env.SELECTIVE_API_KEY && maxRunners !== undefined) {
-            core.warning(`No Selective API key, so no plan: using max-runners (${maxRunners}).`);
-            setPlanOutputs(maxRunners, 'fallback');
-            return;
-        }
         // Check if either apiKey or SELECTIVE_API_KEY is set
         if (!apiKey && !process.env.SELECTIVE_API_KEY) {
             throw new Error('API key is required. Please provide a value for api-key input or set SELECTIVE_API_KEY environment variable.');
@@ -30013,33 +29985,6 @@ async function run() {
         if (github.context.eventName === 'pull_request') {
             core.exportVariable('SELECTIVE_PR_TITLE', github.context.payload.pull_request?.title);
         }
-        const doWarmup = (core.getInput('warmup') || '').toLowerCase() === 'true' ||
-            maxRunners !== undefined;
-        if (!doWarmup)
-            return;
-        const key = (apiKey || process.env.SELECTIVE_API_KEY);
-        const host = core.getInput('host') || process.env.SELECTIVE_HOST || DEFAULT_HOST;
-        const metadata = (0, metadata_1.buildMetadata)(process.env, {
-            language: core.getInput('language'),
-            framework: core.getInput('framework'),
-            runtime_version: core.getInput('runtime-version')
-        });
-        core.info(`warmup: ${await (0, selective_1.warmup)(host, key, metadata)}`);
-        if (maxRunners === undefined)
-            return;
-        const result = await (0, selective_1.plan)({
-            host,
-            apiKey: key,
-            metadata,
-            maxRunners,
-            minRunners: Math.min(intInput('min-runners', 1), maxRunners),
-            targetSeconds: intInput('target-seconds', 120),
-            timeoutSeconds: intInput('timeout-seconds', 90),
-            log: core.debug
-        });
-        const reason = result.detail ? ` (${result.detail})` : '';
-        core.info(`Selective: ${result.runners} runners, ${result.status}${reason}`);
-        setPlanOutputs(result.runners, result.status);
     }
     catch (error) {
         // Fail the workflow run if an error occurs
@@ -30048,166 +29993,6 @@ async function run() {
     }
 }
 run();
-
-
-/***/ }),
-
-/***/ 3630:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.buildMetadata = buildMetadata;
-const github = __importStar(__nccwpck_require__(3228));
-const ZERO_SHA = '0000000000000000000000000000000000000000';
-// Mirrors the GitHub Actions branch of selective-ruby-core's build_env.sh, so a
-// warm-up and plan describe the same change the test runners will report.
-function buildMetadata(env = process.env, extra = {}) {
-    const payload = github.context.payload;
-    const eventBase = payload.pull_request?.base?.sha ?? payload.before ?? '';
-    const baseSha = eventBase === ZERO_SHA ? '' : eventBase;
-    const metadata = {
-        sha: env.SELECTIVE_SHA || env.GITHUB_SHA || '',
-        base_sha: env.SELECTIVE_BASE_SHA || baseSha,
-        branch: env.SELECTIVE_BRANCH || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || '',
-        target_branch: env.SELECTIVE_TARGET_BRANCH || env.GITHUB_BASE_REF || '',
-        git_repo_full_name: env.SELECTIVE_GIT_REPO || env.GITHUB_REPOSITORY || ''
-    };
-    for (const [key, value] of Object.entries(extra)) {
-        if (value)
-            metadata[key] = value;
-    }
-    return metadata;
-}
-
-
-/***/ }),
-
-/***/ 9993:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.httpHost = httpHost;
-exports.warmup = warmup;
-exports.plan = plan;
-const WAIT_SECONDS = 20;
-const WARMUP_TIMEOUT_MS = 20_000;
-// The runners' host is a websocket URL; the HTTP API lives on the same host.
-function httpHost(host) {
-    return host
-        .trim()
-        .replace(/^wss:/, 'https:')
-        .replace(/^ws:/, 'http:')
-        .replace(/\/+$/, '');
-}
-async function post(url, apiKey, body, timeoutMs) {
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { authorization: apiKey, 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs)
-    });
-    let json = null;
-    try {
-        json = (await response.json());
-    }
-    catch {
-        json = null;
-    }
-    return { status: response.status, json };
-}
-async function warmup(host, apiKey, metadata) {
-    try {
-        const { status, json } = await post(`${httpHost(host)}/warmup`, apiKey, metadata, WARMUP_TIMEOUT_MS);
-        return `HTTP ${status} ${JSON.stringify(json)}`;
-    }
-    catch (error) {
-        return `failed: ${error.message}`;
-    }
-}
-// Asks Selective how many runners the suite needs for this change, waiting
-// while the decision is still being prepared. Anything short of a valid
-// answer within the timeout falls back to maxRunners.
-async function plan(options) {
-    const { host, apiKey, metadata, maxRunners, minRunners } = options;
-    const log = options.log ?? (() => { });
-    const deadline = Date.now() + options.timeoutSeconds * 1000;
-    const body = {
-        ...metadata,
-        max: maxRunners,
-        min: minRunners,
-        target_seconds: options.targetSeconds,
-        wait_seconds: WAIT_SECONDS
-    };
-    let detail = 'no answer before the timeout';
-    while (Date.now() < deadline) {
-        const remaining = deadline - Date.now();
-        try {
-            const { status, json } = await post(`${httpHost(host)}/plan`, apiKey, body, Math.min(remaining, (WAIT_SECONDS + 10) * 1000));
-            if (status !== 200 || !json) {
-                detail = `HTTP ${status} ${JSON.stringify(json)}`;
-                break;
-            }
-            log(`plan: ${JSON.stringify(json)}`);
-            if (json.status === 'pending')
-                continue;
-            const runners = json.shards;
-            if (typeof runners === 'number' &&
-                Number.isInteger(runners) &&
-                runners >= 1 &&
-                runners <= maxRunners) {
-                return {
-                    runners,
-                    status: String(json.status),
-                    detail: json.reason ? String(json.reason) : undefined
-                };
-            }
-            detail = `invalid answer ${JSON.stringify(json)}`;
-            break;
-        }
-        catch (error) {
-            detail = error.message;
-            break;
-        }
-    }
-    return { runners: maxRunners, status: 'fallback', detail };
-}
 
 
 /***/ }),

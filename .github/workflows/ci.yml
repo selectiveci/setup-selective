@@ -66,7 +66,7 @@ jobs:
 
       - name: Plan Without A Reachable Host
         id: plan
-        uses: ./
+        uses: ./plan
         with:
           api-key: abc123
           max-runners: 3

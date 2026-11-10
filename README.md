@@ -5,9 +5,9 @@
 [![Check dist](https://github.com/selectiveci/setup-selective/actions/workflows/check-dist.yml/badge.svg)](https://github.com/selectiveci/setup-selective/actions/workflows/check-dist.yml)
 [![Coverage](./badges/coverage.svg)](./badges/coverage.svg)
 
-Sets up [Selective](https://selective.ci) in a GitHub Actions workflow. It can
-also get test selection ready before your test runners start, and tell you how
-many runners the change needs.
+Sets up [Selective](https://selective.ci) in a GitHub Actions workflow. Its
+`plan` action gets test selection ready before your test runners start, and
+tells you how many runners the change needs.
 
 ## Run your tests through Selective
 
@@ -34,29 +34,29 @@ steps:
 ## Start only the runners a change needs
 
 When Selective selects tests for a pull request, a small change may need one
-runner rather than twenty. Add a `selective` job that runs alongside your build
-and gives your test job its matrix:
+runner rather than twenty. Add a `plan` job that runs alongside your build and
+gives your test job its matrix:
 
 ```yaml
 jobs:
-  selective:
+  plan:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
       - id: plan
-        uses: selectiveci/setup-selective@v1
+        uses: selectiveci/setup-selective/plan@v1
         with:
           api-key: ${{ secrets.SELECTIVE_API_KEY }}
           max-runners: 20
 
   tests:
-    needs: [selective]
+    needs: [plan]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        runner: ${{ fromJSON(needs.selective.outputs.matrix) }}
+        runner: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: selectiveci/setup-selective@v1
@@ -66,8 +66,9 @@ jobs:
       - run: bundle exec selective rspec
 ```
 
-- **What it does.** The `selective` job starts preparing selection for the
-  commit, waits for the decision, and outputs a `matrix` of runner indices.
+- **What it does.** The plan starts preparing selection for the commit, waits
+  for the decision, and outputs a `matrix` of runner indices. Each test runner
+  still uses `setup-selective` as before.
 - **The count it gives.** Enough runners for about `target-seconds` (default
   120) of selected tests each, between `min-runners` and `max-runners`.
 - **Builds that run everything.** A build that doesn't select gets
@@ -79,9 +80,8 @@ jobs:
   takes longer than the build.
 - **No extra jobs.** Preparation starts in your workflow, so it happens only
   for builds that will run tests.
-
 - **Pull requests from forks.** They get no secrets, so without an API key
-  the action outputs `max-runners` rather than failing.
+  the plan is `max-runners` rather than a failure.
 
 ### Required status checks
 
@@ -99,11 +99,6 @@ protection. Add one job that passes when they all did, and require that:
       - run: test "${{ needs.tests.result }}" = success
 ```
 
-### Warm up without planning
-
-To keep a fixed number of runners but have selection ready sooner, run the
-action once with `warmup: true` early in the workflow.
-
 ### Suites that run on several language versions
 
 Selective records a test map for each environment. If one suite runs on
@@ -117,7 +112,7 @@ matches the run:
 - id: ruby
   run: ruby -e 'puts "version=#{RUBY_VERSION}"' >> "$GITHUB_OUTPUT"
 - id: plan
-  uses: selectiveci/setup-selective@v1
+  uses: selectiveci/setup-selective/plan@v1
   with:
     api-key: ${{ secrets.SELECTIVE_API_KEY }}
     max-runners: 20
@@ -128,12 +123,19 @@ matches the run:
 
 ## Inputs
 
+`selectiveci/setup-selective`, on each test runner:
+
 | Input | Default | Description |
 | --- | --- | --- |
 | `api-key` | `SELECTIVE_API_KEY` | The suite's API key |
 | `runner-id` | | This runner's index in the matrix |
-| `warmup` | `false` | Start preparing selection for this commit |
-| `max-runners` | | The most runners to plan; setting it warms up and plans |
+
+`selectiveci/setup-selective/plan`, once per build:
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `api-key` | `SELECTIVE_API_KEY` | The suite's API key |
+| `max-runners` | (required) | The most runners; the plan when every test runs |
 | `min-runners` | `1` | The fewest runners to plan |
 | `target-seconds` | `120` | Seconds of selected tests per runner |
 | `timeout-seconds` | `90` | How long to wait before using `max-runners` |
@@ -142,7 +144,7 @@ matches the run:
 | `framework` | | For suites with several environments |
 | `runtime-version` | | For suites with several environments |
 
-## Outputs
+## Plan outputs
 
 | Output | Description |
 | --- | --- |
