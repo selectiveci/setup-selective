@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
-import { buildMetadata } from './metadata'
-import { plan, warmup } from './selective'
+import { buildMetadata } from './metadata.js'
+import { plan, warmup } from './selective.js'
 
 const DEFAULT_HOST = 'https://app.selective.ci'
 

@@ -2,6 +2,7 @@
   "name": "setup-selective",
   "description": "Setup Selective GitHub action",
   "version": "1.2.0",
+  "type": "module",
   "author": "Selective",
   "repository": {
     "type": "git",
@@ -26,19 +27,18 @@
   },
   "scripts": {
     "bundle": "npm run format:write && npm run package",
-    "ci-test": "jest",
+    "ci-test": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 jest",
     "coverage": "make-coverage-badge --output-path ./badges/coverage.svg",
     "format:write": "prettier --write **/*.ts",
     "format:check": "prettier --check **/*.ts",
     "lint": "npx eslint . -c ./.github/linters/.eslintrc.yml",
     "package": "ncc build src/main.ts --license licenses.txt && ncc build src/plan.ts -o dist/plan --license licenses.txt",
     "package:watch": "npm run package -- --watch",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 jest",
     "all": "npm run format:write && npm run lint && npm run test && npm run coverage && npm run package"
   },
   "license": "MIT",
   "jest": {
-    "preset": "ts-jest",
     "verbose": true,
     "clearMocks": true,
     "testEnvironment": "node",
@@ -53,8 +53,19 @@
       "/node_modules/",
       "/dist/"
     ],
+    "extensionsToTreatAsEsm": [
+      ".ts"
+    ],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
     "transform": {
-      "^.+\\.ts$": "ts-jest"
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "useESM": true
+        }
+      ]
     },
     "coverageReporters": [
       "json-summary",
@@ -67,25 +78,24 @@
     ]
   },
   "dependencies": {
-    "@actions/core": "^1.10.1",
-    "@actions/github": "6.0.0"
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.11",
-    "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
+    "@jest/globals": "^30.4.2",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.6.2",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/parser": "^8.62.1",
     "@vercel/ncc": "^0.38.1",
     "eslint": "^8.56.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-github": "^5.1.8",
-    "eslint-plugin-jest": "^29.15.2",
-    "eslint-plugin-jsonc": "^2.13.0",
-    "eslint-plugin-prettier": "^5.1.3",
-    "jest": "^29.7.0",
-    "js-yaml": "^4.1.0",
+    "eslint-plugin-jest": "^29.15.4",
+    "eslint-plugin-prettier": "^5.5.6",
+    "jest": "^30.4.2",
     "make-coverage-badge": "^1.2.0",
     "prettier": "^3.2.5",
-    "prettier-eslint": "^16.2.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3"
   }

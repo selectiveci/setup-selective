@@ -1,4 +1,5 @@
-import { httpHost, plan, warmup } from '../src/selective'
+import { jest } from '@jest/globals'
+import { httpHost, plan, warmup } from '../src/selective.js'
 
 const options = {
   host: 'https://selective.test',
@@ -25,7 +26,7 @@ describe('httpHost', () => {
 })
 
 describe('plan', () => {
-  let fetchMock: jest.SpyInstance
+  let fetchMock: jest.Spied<typeof fetch>
 
   beforeEach(() => {
     fetchMock = jest.spyOn(global, 'fetch')
@@ -44,9 +45,10 @@ describe('plan', () => {
       detail: undefined
     })
     const [url, init] = fetchMock.mock.calls[0]
+    const headers = init?.headers as Record<string, string>
     expect(url).toBe('https://selective.test/plan')
-    expect(init.headers.authorization).toBe('key')
-    expect(JSON.parse(init.body)).toEqual({
+    expect(headers.authorization).toBe('key')
+    expect(JSON.parse(init?.body as string)).toEqual({
       sha: 'abc',
       max: 20,
       min: 2,
