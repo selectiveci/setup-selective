@@ -44,7 +44,8 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TYPESCRIPT_DEFAULT_STYLE: prettier
-          FILTER_REGEX_EXCLUDE: ".*dist/.*.txt"
+          # dist/ is the generated bundle; check-dist.yml verifies it.
+          FILTER_REGEX_EXCLUDE: ".*dist/.*"
           # JS/TS linting is covered by `npm run lint` in ci.yml using the
           # project's eslint config; super-linter v8 does not pick up the
           # legacy .eslintrc.yml reliably, so skip it here.

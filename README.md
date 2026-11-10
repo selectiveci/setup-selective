@@ -67,7 +67,7 @@ jobs:
 ```
 
 - **What it does.** The `selective` job starts preparing selection for the
-  commit, waits for the decision, and outputs a `matrix` of runner indexes.
+  commit, waits for the decision, and outputs a `matrix` of runner indices.
 - **The count it gives.** Enough runners for about `target-seconds` (default
   120) of selected tests each, between `min-runners` and `max-runners`.
 - **Builds that run everything.** A build that doesn't select gets
@@ -137,13 +137,19 @@ matches the run:
 | `min-runners` | `1` | The fewest runners to plan |
 | `target-seconds` | `120` | Seconds of selected tests per runner |
 | `timeout-seconds` | `90` | How long to wait before using `max-runners` |
-| `host` | `SELECTIVE_HOST`, then `https://app.selective.ci` | Selective host |
-| `language`, `framework`, `runtime-version` | | The test environment, for suites with several |
+| `host` | `SELECTIVE_HOST` | Selective host, else `app.selective.ci` |
+| `language` | | For suites with several environments |
+| `framework` | | For suites with several environments |
+| `runtime-version` | | For suites with several environments |
 
 ## Outputs
 
 | Output | Description |
 | --- | --- |
 | `runners` | How many runners to start |
-| `matrix` | A JSON array of runner indexes, `[0, 1, …]`, for `strategy.matrix` |
-| `status` | `selected` (sized to the selection), `full` (every test runs) or `fallback` (no answer; `max-runners`) |
+| `matrix` | Runner indices, `[0, 1, …]`, for `strategy.matrix` |
+| `status` | `selected`, `full` or `fallback` |
+
+`status` is `selected` when the plan is sized to the selection, `full` when
+every test runs, and `fallback` when Selective didn't answer and the plan is
+`max-runners`.

@@ -39,7 +39,7 @@ outputs:
   runners:
     description: 'How many runners to start: the plan, or max-runners when Selective could not answer'
   matrix:
-    description: 'A JSON array of runner indexes, [0, 1, ...], for strategy.matrix'
+    description: 'A JSON array of runner indices, [0, 1, ...], for strategy.matrix'
   status:
     description: 'selected (sized to the selection), full (every test runs), or fallback (no answer; max-runners)'
 
