@@ -1,5 +1,5 @@
 name: 'Setup Selective'
-description: 'Sets necessary environment variables for Selective'
+description: 'Sets up Selective in a workflow, warms up test selection, and plans how many runners a suite needs'
 author: 'Selective'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
@@ -12,6 +12,36 @@ inputs:
     description: 'The index of the CI node as defined in the matrix'
   api-key:
     description: 'Your Selective Suite API Key'
+  warmup:
+    description: 'Start preparing test selection for this commit now, so it is ready when the test runners connect'
+    default: 'false'
+  max-runners:
+    description: 'Plan runners: the most runners the suite may use. Setting it warms up, then waits for the plan and sets the runners and matrix outputs'
+  min-runners:
+    description: 'Plan runners: the fewest runners to plan'
+    default: '1'
+  target-seconds:
+    description: 'Plan runners: seconds of selected tests each runner should get'
+    default: '120'
+  timeout-seconds:
+    description: 'Plan runners: how long to wait for an answer before falling back to max-runners'
+    default: '90'
+  host:
+    description: 'Selective host. Defaults to SELECTIVE_HOST, then https://app.selective.ci'
+  language:
+    description: 'Test language (for example ruby). Only needed when the suite records test maps for several environments'
+  framework:
+    description: 'Test framework (rspec or minitest). Only needed when the suite records test maps for several environments'
+  runtime-version:
+    description: 'Language version (for example 3.3.0). Only needed when the suite records test maps for several environments'
+
+outputs:
+  runners:
+    description: 'How many runners to start: the plan, or max-runners when Selective could not answer'
+  matrix:
+    description: 'A JSON array of runner indices, [0, 1, ...], for strategy.matrix'
+  status:
+    description: 'selected (sized to the selection), full (every test runs), or fallback (no answer; max-runners)'
 
 runs:
   using: node24

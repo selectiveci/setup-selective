@@ -63,3 +63,21 @@ jobs:
         id: output
         run: |
           echo "SELECTIVE_RUNNER_ID: $SELECTIVE_RUNNER_ID"
+
+      - name: Plan Without A Reachable Host
+        id: plan
+        uses: ./
+        with:
+          api-key: abc123
+          max-runners: 3
+          timeout-seconds: 10
+          host: http://127.0.0.1:9
+
+      - name: Check The Fallback
+        env:
+          RUNNERS: ${{ steps.plan.outputs.runners }}
+          MATRIX: ${{ steps.plan.outputs.matrix }}
+          STATUS: ${{ steps.plan.outputs.status }}
+        run: |
+          echo "runners=$RUNNERS matrix=$MATRIX status=$STATUS"
+          test "$RUNNERS" = 3 && test "$MATRIX" = "[0,1,2]" && test "$STATUS" = fallback

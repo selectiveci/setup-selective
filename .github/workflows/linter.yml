@@ -50,6 +50,7 @@ jobs:
           # legacy .eslintrc.yml reliably, so skip it here.
           VALIDATE_JAVASCRIPT_ES: false
           VALIDATE_TYPESCRIPT_ES: false
+          VALIDATE_BIOME_LINT: false
           VALIDATE_JSCPD: false
           # Formatters/checkers redundant with prettier or out of scope for a
           # small TypeScript action repo.
