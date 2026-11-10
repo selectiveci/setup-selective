@@ -80,6 +80,25 @@ jobs:
 - **No extra jobs.** Preparation starts in your workflow, so it happens only
   for builds that will run tests.
 
+- **Pull requests from forks.** They get no secrets, so without an API key
+  the action outputs `max-runners` rather than failing.
+
+### Required status checks
+
+A planned matrix has a different number of jobs on each build, so don't
+require the individual test jobs (`tests (0)`, `tests (1)`, …) in branch
+protection. Add one job that passes when they all did, and require that:
+
+```yaml
+  tests-passed:
+    name: Tests passed
+    needs: [tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.tests.result }}" = success
+```
+
 ### Warm up without planning
 
 To keep a fixed number of runners but have selection ready sooner, run the

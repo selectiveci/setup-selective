@@ -15,6 +15,15 @@ function intInput(name: string, fallback: number): number {
   return value
 }
 
+function setPlanOutputs(runners: number, status: string): void {
+  core.setOutput('runners', runners)
+  core.setOutput(
+    'matrix',
+    JSON.stringify(Array.from({ length: runners }, (_, i) => i))
+  )
+  core.setOutput('status', status)
+}
+
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
@@ -23,6 +32,20 @@ export async function run(): Promise<void> {
   try {
     const apiKey = core.getInput('api-key', { required: false })
     const runnerId = core.getInput('runner-id', { required: false })
+
+    const maxRunners = core.getInput('max-runners')
+      ? intInput('max-runners', 1)
+      : undefined
+
+    // Pull requests from forks get no secrets; planning still has to give
+    // the test job a matrix.
+    if (!apiKey && !process.env.SELECTIVE_API_KEY && maxRunners !== undefined) {
+      core.warning(
+        `No Selective API key, so no plan: using max-runners (${maxRunners}).`
+      )
+      setPlanOutputs(maxRunners, 'fallback')
+      return
+    }
 
     // Check if either apiKey or SELECTIVE_API_KEY is set
     if (!apiKey && !process.env.SELECTIVE_API_KEY) {
@@ -47,9 +70,6 @@ export async function run(): Promise<void> {
       )
     }
 
-    const maxRunners = core.getInput('max-runners')
-      ? intInput('max-runners', 1)
-      : undefined
     const doWarmup =
       (core.getInput('warmup') || '').toLowerCase() === 'true' ||
       maxRunners !== undefined
@@ -80,12 +100,7 @@ export async function run(): Promise<void> {
 
     const reason = result.detail ? ` (${result.detail})` : ''
     core.info(`Selective: ${result.runners} runners, ${result.status}${reason}`)
-    core.setOutput('runners', result.runners)
-    core.setOutput(
-      'matrix',
-      JSON.stringify(Array.from({ length: result.runners }, (_, i) => i))
-    )
-    core.setOutput('status', result.status)
+    setPlanOutputs(result.runners, result.status)
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)

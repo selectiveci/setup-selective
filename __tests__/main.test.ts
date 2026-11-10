@@ -9,7 +9,8 @@ jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
   setOutput: jest.fn(),
   info: jest.fn(),
-  debug: jest.fn()
+  debug: jest.fn(),
+  warning: jest.fn()
 }))
 
 jest.mock('../src/selective', () => ({
@@ -171,6 +172,18 @@ describe('run', () => {
       expect(core.setOutput).toHaveBeenCalledWith('runners', 3)
       expect(core.setOutput).toHaveBeenCalledWith('matrix', '[0,1,2]')
       expect(core.setOutput).toHaveBeenCalledWith('status', 'selected')
+    })
+
+    it('plans max-runners without a key, as on a pull request from a fork', async () => {
+      delete process.env.SELECTIVE_API_KEY
+      inputs({ 'max-runners': '4' })
+
+      await run()
+
+      expect(core.setFailed).not.toHaveBeenCalled()
+      expect(selective.warmup).not.toHaveBeenCalled()
+      expect(core.setOutput).toHaveBeenCalledWith('matrix', '[0,1,2,3]')
+      expect(core.setOutput).toHaveBeenCalledWith('status', 'fallback')
     })
 
     it('rejects a max-runners that is not a positive whole number', async () => {
