@@ -1,15 +1,12 @@
-import * as core from '@actions/core'
-import { run } from '../src/main'
+import { jest } from '@jest/globals'
 
-// Mock the core.exportVariable function
-jest.mock('@actions/core', () => ({
+jest.unstable_mockModule('@actions/core', () => ({
   exportVariable: jest.fn(),
   setFailed: jest.fn(),
   getInput: jest.fn()
 }))
 
-// Mock the github.context object
-jest.mock('@actions/github', () => ({
+jest.unstable_mockModule('@actions/github', () => ({
   context: {
     eventName: 'pull_request',
     payload: {
@@ -20,6 +17,9 @@ jest.mock('@actions/github', () => ({
   }
 }))
 
+const core = await import('@actions/core')
+const { run } = await import('../src/main.js')
+
 describe('run', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -27,8 +27,8 @@ describe('run', () => {
 
   it('exports SELECTIVE_RUNNER_ID variable', async () => {
     // Mock the getInput function
-    // eslint-disable-next-line no-extra-semi
-    ;(core.getInput as jest.Mock)
+    jest
+      .mocked(core.getInput)
       .mockReturnValueOnce('test-api-key')
       .mockReturnValueOnce('1')
 
@@ -39,8 +39,8 @@ describe('run', () => {
 
   it('exports SELECTIVE_PR_TITLE variable for pull_request event', async () => {
     // Mock the getInput function
-    // eslint-disable-next-line no-extra-semi
-    ;(core.getInput as jest.Mock)
+    jest
+      .mocked(core.getInput)
       .mockReturnValueOnce('test-api-key')
       .mockReturnValueOnce('1')
 
@@ -54,8 +54,8 @@ describe('run', () => {
 
   it('exports SELECTIVE_API_KEY variable if api-key input is provided', async () => {
     // Mock the getInput function to return an API key
-    // eslint-disable-next-line no-extra-semi
-    ;(core.getInput as jest.Mock)
+    jest
+      .mocked(core.getInput)
       .mockReturnValueOnce('test-api-key')
       .mockReturnValueOnce('1')
 
@@ -69,10 +69,10 @@ describe('run', () => {
 
   it('throws an error if neither api-key input nor SELECTIVE_API_KEY environment variable is provided', async () => {
     // Mock the getInput function to return undefined
-    // eslint-disable-next-line no-extra-semi
-    ;(core.getInput as jest.Mock)
-      .mockReturnValueOnce(undefined) // For api-key
-      .mockReturnValueOnce(undefined) // For runner-id
+    jest
+      .mocked(core.getInput)
+      .mockReturnValueOnce('') // For api-key
+      .mockReturnValueOnce('') // For runner-id
 
     // Clear the SELECTIVE_API_KEY environment variable
     delete process.env.SELECTIVE_API_KEY
@@ -86,10 +86,7 @@ describe('run', () => {
 
   it('does not throw an error if api-key input is not provided but SELECTIVE_API_KEY environment variable is set', async () => {
     // Mock the getInput function to return undefined
-    // eslint-disable-next-line no-extra-semi
-    ;(core.getInput as jest.Mock)
-      .mockReturnValueOnce(undefined)
-      .mockReturnValueOnce('1')
+    jest.mocked(core.getInput).mockReturnValueOnce('').mockReturnValueOnce('1')
 
     // Set the SELECTIVE_API_KEY environment variable
     process.env.SELECTIVE_API_KEY = 'test-api-key'
@@ -99,11 +96,10 @@ describe('run', () => {
 
   it('fails the workflow run if an error occurs', async () => {
     // Mock the getInput function
-    // eslint-disable-next-line no-extra-semi
-    ;(core.getInput as jest.Mock).mockReturnValueOnce('1')
+    jest.mocked(core.getInput).mockReturnValueOnce('1')
 
     const error = new Error('Test error')
-    jest.spyOn(core, 'exportVariable').mockImplementation(() => {
+    jest.mocked(core.exportVariable).mockImplementation(() => {
       throw error
     })
 

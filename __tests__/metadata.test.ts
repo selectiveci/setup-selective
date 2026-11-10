@@ -1,7 +1,11 @@
-import * as github from '@actions/github'
-import { buildMetadata } from '../src/metadata'
+import { jest } from '@jest/globals'
 
-jest.mock('@actions/github', () => ({ context: { payload: {} } }))
+jest.unstable_mockModule('@actions/github', () => ({
+  context: { payload: {} }
+}))
+
+const github = await import('@actions/github')
+const { buildMetadata } = await import('../src/metadata.js')
 
 const context = github.context as { payload: Record<string, unknown> }
 

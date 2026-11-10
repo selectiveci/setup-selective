@@ -20,7 +20,7 @@ strategy:
     runner: [0, 1, 2, 3]
 
 steps:
-  - uses: actions/checkout@v6
+  - uses: actions/checkout@v7
 
   - name: Setup Selective
     uses: selectiveci/setup-selective@v1
@@ -58,7 +58,7 @@ jobs:
       matrix:
         runner: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: selectiveci/setup-selective@v1
         with:
           api-key: ${{ secrets.SELECTIVE_API_KEY }}

@@ -1,8 +1,7 @@
-import * as core from '@actions/core'
-import { run } from '../src/plan'
-import * as selective from '../src/selective'
+import { jest } from '@jest/globals'
+import type { Plan } from '../src/selective.js'
 
-jest.mock('@actions/core', () => ({
+jest.unstable_mockModule('@actions/core', () => ({
   getInput: jest.fn(),
   setOutput: jest.fn(),
   setFailed: jest.fn(),
@@ -11,18 +10,23 @@ jest.mock('@actions/core', () => ({
   warning: jest.fn()
 }))
 
-jest.mock('@actions/github', () => ({ context: { payload: {} } }))
-
-jest.mock('../src/selective', () => ({
-  warmup: jest.fn(async () => 'HTTP 202'),
-  plan: jest.fn()
+jest.unstable_mockModule('@actions/github', () => ({
+  context: { payload: {} }
 }))
 
+jest.unstable_mockModule('../src/selective.js', () => ({
+  warmup: jest.fn(async () => 'HTTP 202'),
+  plan: jest.fn<() => Promise<Plan>>()
+}))
+
+const core = await import('@actions/core')
+const selective = await import('../src/selective.js')
+const { run } = await import('../src/plan.js')
+
 function inputs(values: Record<string, string>): void {
-  // eslint-disable-next-line no-extra-semi
-  ;(core.getInput as jest.Mock).mockImplementation(
-    (name: string) => values[name] ?? ''
-  )
+  jest
+    .mocked(core.getInput)
+    .mockImplementation((name: string) => values[name] ?? '')
 }
 
 describe('plan action', () => {
@@ -33,7 +37,7 @@ describe('plan action', () => {
 
   it('warms up, plans and sets the runners and matrix outputs', async () => {
     inputs({ 'api-key': 'key', 'max-runners': '20', 'min-runners': '30' })
-    ;(selective.plan as jest.Mock).mockResolvedValueOnce({
+    jest.mocked(selective.plan).mockResolvedValueOnce({
       runners: 3,
       status: 'selected'
     })
@@ -58,7 +62,7 @@ describe('plan action', () => {
   it('uses SELECTIVE_API_KEY when api-key is not given', async () => {
     process.env.SELECTIVE_API_KEY = 'env-key'
     inputs({ 'max-runners': '4' })
-    ;(selective.plan as jest.Mock).mockResolvedValueOnce({
+    jest.mocked(selective.plan).mockResolvedValueOnce({
       runners: 4,
       status: 'full'
     })
